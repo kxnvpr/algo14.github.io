@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Алгоритм Краскала</title>
+    <style>
+        canvas { border: 1px solid #ccc; background: #f9f9f9; }
+        .controls { margin: 10px 0; }
+        .log { margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; }
+        .log h3 { margin: 5px 0; }
+        .log ul { padding-left: 20px; }
+        .log li.green { color: green; font-weight: bold; }
+        .total { font-weight: bold; color: blue; font-size: 1.1em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Алгоритм Краскала</h2>
+    <div class="controls">
+        <button onclick="startAlgorithm()">Почати алгоритм</button>
+        <button onclick="nextStep()">Наступний крок</button>
+        <button onclick="reset()">Скинути</button>
+    </div>
+    <canvas id="graphCanvas" width="800" height="600"></canvas>
+    <div class="log">
+        <h3>Обрані ребра:</h3>
+        <ul id="selectedEdgesList"></ul>
+        <div class="total">Загальна довжина: <span id="totalWeight">0</span></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        let vertices = [];
+        let edges = [];
+        let mstEdges = [];
+        let currentStep = -1;
+        let parent = {};
+        let rank = {};
+
+        const xmlString = `
+        <graph_data>
+            <graph id="1">
+                <title>Граф з рис. 2</title>
+                <points>
+                    <point id="1" x="500" y="500"/>
+                    <point id="2" x="300" y="400"/>
+                    <point id="3" x="100" y="300"/>
+                    <point id="4" x="200" y="100"/>
+                    <point id="5" x="400" y="50"/>
+                    <point id="6" x="600" y="100"/>
+                    <point id="7" x="550" y="300"/>
+                    <point id="8" x="700" y="200"/>
+                    <point id="9" x="450" y="350"/>
+                    <point id="10" x="300" y="250"/>
+                    <point id="11" x="450" y="200"/>
+                </points>
+                <lines>
+                    <line id="1" from="1" to="2" weight="31"/>
+                    <line id="2" from="1" to="7" weight="31"/>
+                    <line id="3" from="1" to="9" weight="14"/>
+                    <line id="4" from="2" to="3" weight="65"/>
+                    <line id="5" from="2" to="10" weight="35"/>
+                    <line id="6" from="2" to="9" weight="14"/>
+                    <line id="7" from="3" to="4" weight="14"/>
+                    <line id="8" from="3" to="10" weight="32"/>
+                    <line id="9" from="4" to="5" weight="12"/>
+                    <line id="10" from="4" to="10" weight="45"/>
+                    <line id="11" from="4" to="11" weight="67"/>
+                    <line id="12" from="5" to="6" weight="35"/>
+                    <line id="13" from="5" to="11" weight="23"/>
+                    <line id="14" from="6" to="7" weight="24"/>
+                    <line id="15" from="6" to="8" weight="56"/>
+                    <line id="16" from="7" to="8" weight="58"/>
+                    <line id="17" from="7" to="9" weight="24"/>
+                    <line id="18" from="8" to="6" weight="56"/>
+                    <line id="19" from="9" to="10" weight="23"/>
+                    <line id="20" from="9" to="11" weight="83"/>
+                    <line id="21" from="10" to="11" weight="23"/>
+                    <line id="22" from="11" to="6" weight="3"/>
+                </lines>
+            </graph>
+        </graph_data>`;
+
+        function parseXML() {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+            const graphNode = xmlDoc.getElementsByTagName("graph")[0];
+            const points = graphNode.getElementsByTagName("point");
+            const lines = graphNode.getElementsByTagName("line");
+
+            vertices = Array.from(points).map(p => ({
+                id: p.getAttribute("id"),
+                x: parseFloat(p.getAttribute("x")),
+                y: parseFloat(p.getAttribute("y"))
+            }));
+
+            edges = Array.from(lines).map(l => ({
+                id: l.getAttribute("id"),
+                from: l.getAttribute("from"),
+                to: l.getAttribute("to"),
+                weight: parseFloat(l.getAttribute("weight"))
+            }));
+        }
+
+        function insertionSort() {
+            for (let i = 1; i < edges.length; i++) {
+                let key = edges[i];
+                let j = i - 1;
+                while (j >= 0 && edges[j].weight > key.weight) {
+                    edges[j + 1] = edges[j];
+                    j--;
+                }
+                edges[j + 1] = key;
+            }
+        }
+
+        function find(x) {
+            if (parent[x] !== x) parent[x] = find(parent[x]);
+            return parent[x];
+        }
+
+        function union(x, y) {
+            let px = find(x), py = find(y);
+            if (px === py) return false;
+            if (rank[px] < rank[py]) [px, py] = [py, px];
+            parent[py] = px;
+            if (rank[px] === rank[py]) rank[px]++;
+            return true;
+        }
+
+        function initKruskal() {
+            insertionSort();
+            vertices.forEach(v => {
+                parent[v.id] = v.id;
+                rank[v.id] = 0;
+            });
+            mstEdges = [];
+            currentStep = -1;
+            updateLog();
+        }
+
+        function nextStep() {
+            if (currentStep >= edges.length - 1 || !mstEdges) return;
+            currentStep++;
+            const edge = edges[currentStep];
+            if (union(edge.from, edge.to)) {
+                mstEdges.push(edge);
+            }
+            drawGraph();
+            updateLog();
+        }
+
+        function updateLog() {
+            const list = document.getElementById('selectedEdgesList');
+            const totalSpan = document.getElementById('totalWeight');
+            list.innerHTML = '';
+            let total = 0;
+
+            mstEdges.forEach(edge => {
+                const li = document.createElement('li');
+                li.textContent = `${edge.from} - ${edge.to} (вага ${edge.weight})`;
+                li.className = 'green';
+                list.appendChild(li);
+                total += edge.weight;
+            });
+
+            totalSpan.textContent = total;
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            edges.forEach(edge => {
+                const from = vertices.find(v => v.id === edge.from);
+                const to = vertices.find(v => v.id === edge.to);
+                if (!from || !to) return;
+
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                const midX = (from.x + to.x) / 2;
+                const midY = (from.y + to.y) / 2;
+                ctx.fillStyle = '#000';
+                ctx.font = '12px Arial';
+                ctx.fillText(edge.weight, midX, midY);
+            });
+
+            vertices.forEach(vertex => {
+                ctx.beginPath();
+                ctx.arc(vertex.x, vertex.y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = '#ddd';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#000';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(vertex.id, vertex.x, vertex.y + 5);
+            });
+
+            mstEdges.forEach(edge => {
+                const from = vertices.find(v => v.id === edge.from);
+                const to = vertices.find(v => v.id === edge.to);
+                if (!from || !to) return;
+
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.strokeStyle = '#e00';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            });
+        }
+
+        function startAlgorithm() {
+            parseXML();
+            initKruskal();
+            drawGraph();
+        }
+
+        function reset() {
+            currentStep = -1;
+            mstEdges = [];
+            parent = {};
+            rank = {};
+            drawGraph();
+            updateLog();
+        }
+
+        parseXML();
+        drawGraph();
+    </script>
+</body>
+</html>
