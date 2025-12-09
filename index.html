@@ -1,31 +1,65 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
 <title>Макс. потік (1→10) — як на зображенні</title>
 <style>
 body { font-family: sans-serif; margin: 10px; background: #f8f9fa; }
-#container { display: flex; gap: 15px; }
-#graph { border: 1px solid #ced4da; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-.panel { width: 260px; padding: 15px; background: #fff; border: 1px solid #dee2e6; border-radius: 6px; }
-#stepList { max-height: 280px; overflow-y: auto; padding-left: 15px; margin-top: 10px; }
+#graph { 
+  display: block; 
+  margin: 0 auto 15px; 
+  border: 1px solid #ced4da; 
+  background: #fff; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
+}
+.panel { 
+  width: 100%; 
+  max-width: 800px; 
+  margin: 0 auto; 
+  padding: 15px; 
+  background: #fff; 
+  border: 1px solid #dee2e6; 
+  border-radius: 6px; 
+}
+#stepList { 
+  max-height: 200px; 
+  overflow-y: auto; 
+  padding-left: 15px; 
+  margin-top: 10px; 
+}
 li { margin: 4px 0; }
-#result { margin-top: 15px; font-weight: bold; color: #6f42c1; }
-button { width: 100%; padding: 10px; background: #6f42c1; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-button:hover { background: #5a32a3; }
+#result { 
+  margin-top: 15px; 
+  font-weight: bold; 
+  color: #28a745; 
+}
+button { 
+  width: 120px; 
+  padding: 10px; 
+  background: #20c997; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  display: block; 
+  margin: 0 auto; 
+}
+button:hover { background: #1ba87e; }
 button:disabled { background: #adb5bd; cursor: not-allowed; }
+#container { text-align: center; }
 </style>
 </head>
 <body>
 <h2>Пошук шляху з максимальною пропускною здатністю (1 → 10)</h2>
-<div id="container">
-  <canvas id="graph" width="780" height="520"></canvas>
-  <div class="panel">
-    <button id="startBtn">Почати</button>
-    <h3>Шляхи:</h3>
-    <ul id="stepList"></ul>
-    <div id="result">Макс. пропускна здатність: —</div>
-  </div>
+
+<canvas id="graph" width="780" height="520"></canvas>
+
+<div class="panel">
+  <button id="startBtn">Почати</button>
+  <h3>Шляхи:</h3>
+  <ul id="stepList"></ul>
+  <div id="result">Макс. пропускна здатність: —</div>
 </div>
 
 <script>
@@ -117,7 +151,7 @@ const ctx = canvas.getContext("2d");
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = "#868e96";
+  ctx.strokeStyle = "#6c757d";
   ctx.lineWidth = 1.2;
   for (let u in cap) for (let v in cap[u]) {
     if (+u < +v) {
@@ -138,17 +172,17 @@ function draw() {
 
       ctx.fillStyle = "#fff";
       ctx.fillRect(midX - textWidth/2 - pad, midY - textHeight/2 - pad, textWidth + 2*pad, textHeight + 2*pad);
-      ctx.strokeStyle = "#ccc";
+      ctx.strokeStyle = "#ddd";
       ctx.strokeRect(midX - textWidth/2 - pad, midY - textHeight/2 - pad, textWidth + 2*pad, textHeight + 2*pad);
 
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = "#495057";
       ctx.fillText(text, midX, midY + 4);
     }
   }
 
   if (running && stepIdx > 0 && stepIdx <= paths.length) {
     const p = paths[stepIdx - 1];
-    ctx.strokeStyle = "#e67700";
+    ctx.strokeStyle = "#ffc107";
     ctx.lineWidth = 4;
     for (let i = 0; i < p.length - 1; i++) {
       const u = p[i], v = p[i + 1];
@@ -159,11 +193,10 @@ function draw() {
     }
   }
 
-  // Вершини
   for (let id in nodes) {
     ctx.beginPath();
     ctx.arc(nodes[id].x, nodes[id].y, 20, 0, Math.PI * 2);
-    ctx.fillStyle = id == 1 || id == 10 ? "#6f42c1" : "#6c757d";
+    ctx.fillStyle = id == 1 || id == 10 ? "#28a745" : "#495057";
     ctx.fill();
     ctx.strokeStyle = "#fff";
     ctx.lineWidth = 2;
